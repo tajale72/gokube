@@ -1,0 +1,60 @@
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/bin/
+/vendor/
+
+# Go workspace file
+go.work
+
+# Binary output directory from Makefile
+$(GOBIN)/
+$(APP_NAME)
+
+# Test binary, built with 'go test -c'
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.html
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment files
+.env
+.env.local
+*.env
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Debug files
+debug
+debug.test
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+
+# System Files
+.DS_Store
+Thumbs.db 
