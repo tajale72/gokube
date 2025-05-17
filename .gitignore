@@ -57,4 +57,9 @@ temp/
 
 # System Files
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Certificate and Key files
+*.crt
+*.key
+certs/
