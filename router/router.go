@@ -33,10 +33,10 @@ func (h *Handlers) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(message))
 }
 
-// healthHandler is a function which returns the health status of the service.
+// healthHandler returns the health status of the service.
 func (h *Handlers) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w,, %s%s,runtime.Version(), "v1.0.0")
+	fmt.Fprintf(w, "%s %s", runtime.Version(), "v1.0.0")
 }
 
 func (h *Handlers) Logger(next http.HandlerFunc) http.HandlerFunc {
