@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resident Portal</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Welcome to Your Resident Portal</h1>
+    <nav>
+      <ul>
+        <li><a href="#">Home</a></li>
+        <li><a href="#">Maintenance Request</a></li>
+        <li><a href="#">Pay Rent</a></li>
+        <li><a href="#">Notices</a></li>
+        <li><a href="#">Profile</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="announcements">
+      <h2>Community Announcements</h2>
+      <ul id="announcement-list">
+        <li>📢 Pool cleaning on June 5th</li>
+        <li>🚧 Elevator maintenance on June 10th</li>
+        <li>🗑️ Trash pickup delayed to Friday this week</li>
+      </ul>
+    </section>
+
+    <section class="quick-links">
+      <h2>Quick Actions</h2>
+      <div class="cards">
+        <div class="card" onclick="alert('Redirecting to maintenance request...')">🔧 Request Maintenance</div>
+        <div class="card" onclick="alert('Redirecting to rent payment...')">💳 Pay Rent</div>
+        <div class="card" onclick="alert('Redirecting to your profile...')">👤 View Profile</div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Your Apartment Community. All rights reserved.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
