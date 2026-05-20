@@ -1,0 +1,38 @@
+# Development environment values
+# Use with: helm install -f values-dev.yaml
+
+api:
+  replicaCount: 1
+  image:
+    tag: "dev"
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+
+ui:
+  replicaCount: 1
+  image:
+    tag: "dev"
+  resources:
+    requests:
+      cpu: "25m"
+      memory: "32Mi"
+    limits:
+      cpu: "100m"
+      memory: "64Mi"
+
+ingress:
+  hosts:
+    - host: gokube-dev.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: vue-ui
+        - path: /api
+          pathType: Prefix
+          service: ccda-api
+

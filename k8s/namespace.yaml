@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gokube
+  labels:
+    name: gokube
+    app: gokube

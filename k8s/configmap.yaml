@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gokube-config
+  namespace: gokube
+  labels:
+    app: gokube
+data:
+  ADDR: "0.0.0.0"
+  PORT: "8080"
+  APP_ENV: "production"
+  SERVICE_NAME: "gokube"
+

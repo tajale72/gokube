@@ -1,0 +1,25 @@
+# Multi-stage build for Vue UI application
+# Stage 1: Build Vue application (if you have a Vue project with build step)
+# Uncomment and modify if you have a Vue project that needs building
+# FROM node:18-alpine AS builder
+# WORKDIR /app
+# COPY package*.json ./
+# RUN npm ci
+# COPY . .
+# RUN npm run build
+
+# Stage 2: Serve static files with nginx
+FROM nginx:alpine
+
+# Copy static files to nginx html directory
+COPY static/ /usr/share/nginx/html/
+
+# Copy custom nginx configuration if needed
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
+

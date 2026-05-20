@@ -15,6 +15,9 @@ type Handlers struct {
 }
 
 func (h *Handlers) SetupRouttes(mux *http.ServeMux) {
+	// Serve static files
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
+
 	// Handle the root route
 	mux.HandleFunc("/", h.Logger(h.HomeHandler))
 	mux.HandleFunc("/health", h.Logger(h.healthHandler))
@@ -28,6 +31,12 @@ func NewHandlers(logger *log.Logger) *Handlers {
 }
 
 func (h *Handlers) HomeHandler(w http.ResponseWriter, r *http.Request) {
+	// Serve the HTML file for the root path
+	if r.URL.Path == "/" {
+		http.ServeFile(w, r, "static/index.html")
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(message))

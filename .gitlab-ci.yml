@@ -1,0 +1,195 @@
+stages:
+  - build
+  - push
+  - deploy
+
+variables:
+  # Artifactory Configuration
+  ARTIFACTORY_REGISTRY: "${CI_REGISTRY}" # Update with your Artifactory registry URL
+  ARTIFACTORY_USER: "${CI_REGISTRY_USER}" # Update with Artifactory username variable
+  ARTIFACTORY_PASSWORD: "${CI_REGISTRY_PASSWORD}" # Update with Artifactory password variable
+  
+  # Image Configuration
+  API_IMAGE_NAME: "ccda-api"
+  UI_IMAGE_NAME: "vue-ui"
+  IMAGE_TAG: "${CI_COMMIT_SHORT_SHA}" # Use commit SHA as tag, or use ${CI_COMMIT_TAG} for tags
+  
+  # Kubernetes Configuration
+  KUBERNETES_NAMESPACE: "gokube"
+  HELM_RELEASE_NAME: "gokube"
+  
+  # Helm Configuration
+  HELM_VERSION: "3.12.0"
+
+# Build API Docker Image
+build-api:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u "$ARTIFACTORY_USER" -p "$ARTIFACTORY_PASSWORD" "$ARTIFACTORY_REGISTRY"
+  script:
+    - echo "Building CCDA-API Docker image..."
+    - docker build -t "$ARTIFACTORY_REGISTRY/$API_IMAGE_NAME:$IMAGE_TAG" -t "$ARTIFACTORY_REGISTRY/$API_IMAGE_NAME:latest" -f Dockerfile .
+    - docker images
+  only:
+    - main
+    - develop
+    - merge_requests
+  tags:
+    - docker
+
+# Build Vue UI Docker Image
+build-ui:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u "$ARTIFACTORY_USER" -p "$ARTIFACTORY_PASSWORD" "$ARTIFACTORY_REGISTRY"
+  script:
+    - echo "Building Vue UI Docker image..."
+    - |
+      if [ -f "Dockerfile.ui" ]; then
+        docker build -t "$ARTIFACTORY_REGISTRY/$UI_IMAGE_NAME:$IMAGE_TAG" -t "$ARTIFACTORY_REGISTRY/$UI_IMAGE_NAME:latest" -f Dockerfile.ui .
+      else
+        echo "Dockerfile.ui not found. Creating a basic Vue UI Dockerfile..."
+        cat > Dockerfile.ui << 'EOF'
+        FROM nginx:alpine
+        COPY static/ /usr/share/nginx/html/
+        EXPOSE 80
+        CMD ["nginx", "-g", "daemon off;"]
+        EOF
+        docker build -t "$ARTIFACTORY_REGISTRY/$UI_IMAGE_NAME:$IMAGE_TAG" -t "$ARTIFACTORY_REGISTRY/$UI_IMAGE_NAME:latest" -f Dockerfile.ui .
+      fi
+    - docker images
+  only:
+    - main
+    - develop
+    - merge_requests
+  tags:
+    - docker
+
+# Push API Image to Artifactory
+push-api:
+  stage: push
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u "$ARTIFACTORY_USER" -p "$ARTIFACTORY_PASSWORD" "$ARTIFACTORY_REGISTRY"
+  script:
+    - echo "Pushing CCDA-API image to Artifactory..."
+    - docker push "$ARTIFACTORY_REGISTRY/$API_IMAGE_NAME:$IMAGE_TAG"
+    - docker push "$ARTIFACTORY_REGISTRY/$API_IMAGE_NAME:latest"
+  dependencies:
+    - build-api
+  only:
+    - main
+    - develop
+  tags:
+    - docker
+
+# Push UI Image to Artifactory
+push-ui:
+  stage: push
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u "$ARTIFACTORY_USER" -p "$ARTIFACTORY_PASSWORD" "$ARTIFACTORY_REGISTRY"
+  script:
+    - echo "Pushing Vue UI image to Artifactory..."
+    - docker push "$ARTIFACTORY_REGISTRY/$UI_IMAGE_NAME:$IMAGE_TAG"
+    - docker push "$ARTIFACTORY_REGISTRY/$UI_IMAGE_NAME:latest"
+  dependencies:
+    - build-ui
+  only:
+    - main
+    - develop
+  tags:
+    - docker
+
+# Deploy using Helm
+deploy:
+  stage: deploy
+  image: alpine/helm:${HELM_VERSION}
+  before_script:
+    - apk add --no-cache curl
+    - |
+      # Install kubectl if needed
+      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      chmod +x kubectl
+      mv kubectl /usr/local/bin/
+    - |
+      # Setup kubectl config (you may need to adjust this based on your setup)
+      # Option 1: Using kubeconfig file from CI/CD variables
+      if [ -n "$KUBECONFIG" ]; then
+        mkdir -p ~/.kube
+        echo "$KUBECONFIG" > ~/.kube/config
+        chmod 600 ~/.kube/config
+      fi
+      # Option 2: Using service account token (for GitLab Kubernetes integration)
+      # kubectl config set-cluster k8s --server="$KUBE_URL" --certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      # kubectl config set-credentials gitlab --token="$KUBE_TOKEN"
+      # kubectl config set-context default --cluster=k8s --user=gitlab
+      # kubectl config use-context default
+  script:
+    - echo "Deploying to Kubernetes using Helm..."
+    - |
+      helm upgrade --install $HELM_RELEASE_NAME ./helm \
+        --namespace $KUBERNETES_NAMESPACE \
+        --create-namespace \
+        --set global.imageRegistry=$ARTIFACTORY_REGISTRY \
+        --set global.imagePullSecrets[0].name=$ARTIFACTORY_IMAGE_PULL_SECRET \
+        --set api.image.tag=$IMAGE_TAG \
+        --set ui.image.tag=$IMAGE_TAG \
+        --set api.image.pullPolicy=Always \
+        --set ui.image.pullPolicy=Always \
+        --wait \
+        --timeout 5m
+    - echo "Deployment completed successfully!"
+    - helm list -n $KUBERNETES_NAMESPACE
+    - kubectl get pods -n $KUBERNETES_NAMESPACE
+  dependencies:
+    - push-api
+    - push-ui
+  only:
+    - main
+    - develop
+  environment:
+    name: production
+    url: https://gokube.local
+  tags:
+    - kubernetes
+
+# Rollback job (manual)
+rollback:
+  stage: deploy
+  image: alpine/helm:${HELM_VERSION}
+  before_script:
+    - apk add --no-cache curl
+    - |
+      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      chmod +x kubectl
+      mv kubectl /usr/local/bin/
+    - |
+      if [ -n "$KUBECONFIG" ]; then
+        mkdir -p ~/.kube
+        echo "$KUBECONFIG" > ~/.kube/config
+        chmod 600 ~/.kube/config
+      fi
+  script:
+    - echo "Rolling back Helm release..."
+    - helm rollback $HELM_RELEASE_NAME -n $KUBERNETES_NAMESPACE
+    - echo "Rollback completed!"
+    - helm list -n $KUBERNETES_NAMESPACE
+    - kubectl get pods -n $KUBERNETES_NAMESPACE
+  when: manual
+  only:
+    - main
+    - develop
+  tags:
+    - kubernetes
+

@@ -1,11 +1,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gokube 
+  name: gokube
+  namespace: gokube
   labels:
     app: gokube
+    version: v1.0.0
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: gokube
@@ -13,6 +15,7 @@ spec:
     metadata:
       labels:
         app: gokube
+        version: v1.0.0
     spec:
       containers:
       - name: gokube
@@ -20,22 +23,42 @@ spec:
         imagePullPolicy: Never
         ports:
         - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: ADDR
+          value: "0.0.0.0"
+        - name: PORT
+          value: "8080"
         resources:
           requests:
             cpu: "100m"
-            memory: "64Mi"
-          limits:
-            cpu: "200m"
             memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
         livenessProbe:
           httpGet:
             path: /health
             port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 10
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /health
             port: 8080
+            scheme: HTTP
           initialDelaySeconds: 5
-          periodSeconds: 10 
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL 

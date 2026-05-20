@@ -1,0 +1,51 @@
+# Production environment values
+# Use with: helm install -f values-prod.yaml
+
+api:
+  replicaCount: 3
+  image:
+    tag: "latest"
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "512Mi"
+
+ui:
+  replicaCount: 3
+  image:
+    tag: "latest"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+
+ingress:
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: api.yourdomain.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: ccda-api
+    - host: app.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: vue-ui
+  tls:
+    - secretName: api-tls
+      hosts:
+        - api.yourdomain.com
+    - secretName: app-tls
+      hosts:
+        - app.yourdomain.com
+
