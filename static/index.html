@@ -1,133 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <meta charset="UTF-8" />
- <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<link rel="stylesheet" href="/index.css">
-<script src="/index.js"></script>
+  <title>Gokube Weather API</title>
 
- <title>Resident Portal</title>
-
+  <link rel="stylesheet" href="/index.css" />
 </head>
 
-
 <body>
+  <main class="page">
+    <section class="weather-panel">
+      <div class="header">
+        <p class="eyebrow">Gokube Weather API</p>
+        <h1>Local Weather Forecast</h1>
+        <p class="subtitle">
+          Enter latitude and longitude to fetch the latest forecast.
+        </p>
+      </div>
 
+      <div class="form-card">
+        <div class="field">
+          <label for="lat">Latitude</label>
+          <input
+            type="text"
+            id="lat"
+            placeholder="32.7767"
+            value="32.7767"
+          />
+        </div>
 
- <main>
-   <section class="weather">
-     <h2>Local Weather Forecast</h2>
+        <div class="field">
+          <label for="long">Longitude</label>
+          <input
+            type="text"
+            id="long"
+            placeholder="-96.7970"
+            value="-96.7970"
+          />
+        </div>
 
+        <button type="button" onclick="loadWeatherForecast()">
+          Get Weather
+        </button>
+      </div>
 
-     <div class="location-inputs">
-       <input
-         type="text"
-         id="lat"
-         placeholder="Enter Latitude"
-         value="32.7767"
-       />
+      <div class="weather-card">
+        <div class="weather-item">
+          <span class="label">Forecast</span>
+          <strong id="shortForecast">--</strong>
+        </div>
 
+        <div class="weather-item">
+          <span class="label">Temperature</span>
+          <strong id="temperature">--</strong>
+        </div>
 
-       <input
-         type="text"
-         id="long"
-         placeholder="Enter Longitude"
-         value="-96.7970"
-       />
+        <div class="weather-item">
+          <span class="label">Condition</span>
+          <strong id="characterization">--</strong>
+        </div>
+      </div>
+    </section>
+  </main>
 
-
-       <button onclick="loadWeatherForecast()">
-         Get Weather
-       </button>
-     </div>
-
-
-     <div class="weather-card">
-       <p>
-         <strong>Forecast:</strong>
-         <span id="shortForecast">--</span>
-       </p>
-
-
-       <p>
-         <strong>Temperature:</strong>
-         <span id="temperature">--</span>
-       </p>
-
-
-       <p>
-         <strong>Condition:</strong>
-         <span id="characterization">--</span>
-       </p>
-     </div>
-   </section>
- </main>
-
-
-<script>
- async function loadWeatherForecast() {
-   try {
-     const lat =
-       document.getElementById("lat").value;
-
-
-     const long =
-       document.getElementById("long").value;
-
-
-     const response = await fetch(
-       `/weather?lat=${lat}&long=${long}`,
-       {
-         headers: {
-           "X-API-KEY": "111"
-         }
-       }
-     );
-
-
-     if (!response.ok) {
-       throw new Error(
-         "Failed to fetch weather"
-       );
-     }
-
-
-     const data = await response.json();
-
-
-     // Updated response mapping
-     document.getElementById(
-       "shortForecast"
-     ).textContent =
-       data.short_forecast;
-
-
-     document.getElementById(
-       "temperature"
-     ).textContent =
-       `${data.temperature}°${data.temperature_unit}`;
-
-
-     document.getElementById(
-       "characterization"
-     ).textContent =
-       data.characterization;
-
-
-   } catch (error) {
-     console.error(error);
-
-
-     document.getElementById(
-       "shortForecast"
-     ).textContent =
-       "Weather unavailable";
-   }
- }
-</script>
+  <script src="/index.js"></script>
 </body>
 </html>
-
-
-

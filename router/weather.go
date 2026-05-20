@@ -12,41 +12,6 @@ import (
 	"go.uber.org/zap"
 )
 
-func fetchForecastURL(client *http.Client, latStr, longStr string) (string, error) {
-	pointsURL := fmt.Sprintf(
-		"%s/points/%s,%s",
-		config.GetString("WEATHER_API", "https://localhost"),
-		latStr,
-		longStr,
-	)
-
-	req, err := http.NewRequest(http.MethodGet, pointsURL, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed creating NWS points request")
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed calling NWS points metadata endpoint")
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("NWS points endpoint returned status %d", resp.StatusCode)
-	}
-
-	var pointsData NWSPointsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&pointsData); err != nil {
-		return "", fmt.Errorf("failed decoding NWS metadata payload")
-	}
-
-	if pointsData.Properties.ForecastURL == "" {
-		return "", fmt.Errorf("missing forecast URL in NWS metadata response")
-	}
-
-	return pointsData.Properties.ForecastURL, nil
-}
-
 func (h *Handlers) WeatherHandler(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 
@@ -165,31 +130,60 @@ func validateCoordinates(latStr, longStr string) error {
 
 func fetchForecastData(client *http.Client, forecastURL string) (NWSForecastResponse, error) {
 	var forecastData NWSForecastResponse
+	var lastErr error
 
-	req, err := http.NewRequest(http.MethodGet, forecastURL, nil)
-	if err != nil {
-		return forecastData, fmt.Errorf("failed creating NWS forecast request")
+	for attempt := 1; attempt <= 3; attempt++ {
+		req, err := http.NewRequest(http.MethodGet, forecastURL, nil)
+		if err != nil {
+			return forecastData, fmt.Errorf("failed creating NWS forecast request")
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("failed retrieving weather details from NWS grid")
+
+			if attempt < 3 {
+				time.Sleep(time.Duration(attempt) * 200 * time.Millisecond)
+			}
+
+			continue
+		}
+
+		func() {
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				lastErr = fmt.Errorf("NWS forecast endpoint returned status %d", resp.StatusCode)
+				return
+			}
+
+			if err := json.NewDecoder(resp.Body).Decode(&forecastData); err != nil {
+				lastErr = fmt.Errorf("failed decoding weather periods")
+				return
+			}
+
+			if len(forecastData.Properties.Periods) == 0 {
+				lastErr = fmt.Errorf("no weather periods found in NWS response")
+				return
+			}
+
+			lastErr = nil
+		}()
+
+		if lastErr == nil {
+			return forecastData, nil
+		}
+
+		if resp != nil && !isRetryableStatus(resp.StatusCode) {
+			return forecastData, lastErr
+		}
+
+		if attempt < 3 {
+			time.Sleep(time.Duration(attempt) * 200 * time.Millisecond)
+		}
 	}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return forecastData, fmt.Errorf("failed retrieving weather details from NWS grid")
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return forecastData, fmt.Errorf("NWS forecast endpoint returned status %d", resp.StatusCode)
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&forecastData); err != nil {
-		return forecastData, fmt.Errorf("failed decoding weather periods")
-	}
-
-	if len(forecastData.Properties.Periods) == 0 {
-		return forecastData, fmt.Errorf("no weather periods found in NWS response")
-	}
-
-	return forecastData, nil
+	return forecastData, lastErr
 }
 
 func getTemperatureCharacterization(temp int) string {
@@ -212,4 +206,63 @@ func writeJSONError(w http.ResponseWriter, statusCode int, message string) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"error": message,
 	})
+}
+
+func fetchForecastURL(client *http.Client, latStr, longStr string) (string, error) {
+	pointsURL := fmt.Sprintf(
+		"%s/points/%s,%s",
+		config.GetString("WEATHER_API", "https://api.weather.gov"),
+		latStr,
+		longStr,
+	)
+
+	var lastErr error
+
+	for attempt := 1; attempt <= 3; attempt++ {
+		req, err := http.NewRequest(http.MethodGet, pointsURL, nil)
+		if err != nil {
+			return "", fmt.Errorf("failed creating NWS points request")
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("failed calling NWS points metadata endpoint")
+			time.Sleep(time.Duration(attempt) * 200 * time.Millisecond)
+			continue
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
+			var pointsData NWSPointsResponse
+
+			if err := json.NewDecoder(resp.Body).Decode(&pointsData); err != nil {
+				return "", fmt.Errorf("failed decoding NWS metadata payload")
+			}
+
+			if pointsData.Properties.ForecastURL == "" {
+				return "", fmt.Errorf("missing forecast URL in NWS metadata response")
+			}
+
+			return pointsData.Properties.ForecastURL, nil
+		}
+
+		if !isRetryableStatus(resp.StatusCode) {
+			return "", fmt.Errorf("NWS points endpoint returned status %d", resp.StatusCode)
+		}
+
+		lastErr = fmt.Errorf("NWS points endpoint returned status %d", resp.StatusCode)
+
+		time.Sleep(time.Duration(attempt) * 200 * time.Millisecond)
+	}
+
+	return "", lastErr
+}
+
+func isRetryableStatus(statusCode int) bool {
+	return statusCode == http.StatusTooManyRequests ||
+		statusCode == http.StatusInternalServerError ||
+		statusCode == http.StatusBadGateway ||
+		statusCode == http.StatusServiceUnavailable ||
+		statusCode == http.StatusGatewayTimeout
 }
