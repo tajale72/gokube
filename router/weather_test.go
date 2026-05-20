@@ -17,14 +17,8 @@ func testLogger() *log.Logger {
 func withWeatherBaseURL(t *testing.T, baseURL string) {
 	t.Helper()
 
-	oldBaseURL := weatherBaseURL
-	weatherBaseURL = baseURL
-
-	t.Cleanup(func() {
-		weatherBaseURL = oldBaseURL
-	})
+	t.Setenv("WEATHER_API", baseURL)
 }
-
 func newWeatherTestServer(t *testing.T, forecastStatus int, forecastBody string) *httptest.Server {
 	t.Helper()
 

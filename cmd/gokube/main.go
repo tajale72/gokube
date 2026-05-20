@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	"gokube/config"
 	"gokube/router"
@@ -39,7 +41,8 @@ func main() {
 	h.SetupRoutes(mux)
 
 	// Wrap mux with CORS middleware
-	handlerWithCors := corsMiddleware(mux)
+	handlerWithRateLimit := rateLimiterMiddleware(mux)
+	handlerWithCors := corsMiddleware(handlerWithRateLimit)
 
 	srv := server.NewServer(handlerWithCors, addr, port)
 
@@ -49,6 +52,46 @@ func main() {
 	if err != nil {
 		log.Fatalf("Server failed to start: %v ", err)
 	}
+}
+
+func rateLimiterMiddleware(next http.Handler) http.Handler {
+	type visitor struct {
+		count     int
+		resetTime time.Time
+	}
+
+	var mu sync.Mutex
+	visitors := make(map[string]*visitor)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip := r.RemoteAddr
+		now := time.Now()
+
+		mu.Lock()
+
+		v, exists := visitors[ip]
+		if !exists || now.After(v.resetTime) {
+			visitors[ip] = &visitor{
+				count:     1,
+				resetTime: now.Add(time.Minute),
+			}
+			mu.Unlock()
+
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		if v.count >= 60 {
+			mu.Unlock()
+			http.Error(w, "Too many requests", http.StatusTooManyRequests)
+			return
+		}
+
+		v.count++
+		mu.Unlock()
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
