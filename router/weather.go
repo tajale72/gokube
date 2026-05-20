@@ -3,6 +3,8 @@ package router
 import (
 	"encoding/json"
 	"fmt"
+	"gokube/config"
+
 	"net/http"
 	"strconv"
 	"time"
@@ -10,12 +12,10 @@ import (
 	"go.uber.org/zap"
 )
 
-var weatherBaseURL = "https://api.weather.gov"
-
 func fetchForecastURL(client *http.Client, latStr, longStr string) (string, error) {
 	pointsURL := fmt.Sprintf(
 		"%s/points/%s,%s",
-		weatherBaseURL,
+		config.GetString("WEATHER_API", "https://localhost"),
 		latStr,
 		longStr,
 	)

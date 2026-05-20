@@ -19,7 +19,14 @@ type Handlers struct {
 func (h *Handlers) SetupRoutes(mux *http.ServeMux) {
 	mux.Handle("/", h.Logger(http.HandlerFunc(h.HomeHandler)))
 	mux.Handle("/health", h.Logger(http.HandlerFunc(h.HealthHandler)))
-
+	mux.Handle(
+		"/swagger.yaml",
+		h.Logger(http.HandlerFunc(h.SwaggerHandler)),
+	)
+	mux.Handle(
+		"/swagger",
+		h.Logger(http.HandlerFunc(h.SwaggerUIHandler)),
+	)
 	// Protected weather route remains perfect
 	protectedWeather := h.EnforceAuth(http.HandlerFunc(h.WeatherHandler))
 	mux.Handle("/weather", h.Logger(protectedWeather))
@@ -32,8 +39,6 @@ func NewHandlers(logger *log.Logger) *Handlers {
 }
 
 func (h *Handlers) HomeHandler(w http.ResponseWriter, r *http.Request) {
-
-	h.logger.Println("calling handler")
 	// If the user requests a specific static file asset (like script.js or style.css)
 	if r.URL.Path != "/" {
 		http.ServeFile(w, r, "./static"+r.URL.Path)
@@ -74,4 +79,14 @@ func (h *Handlers) EnforceAuth(next http.Handler) http.Handler {
 		// Token is valid, proceed to the actual endpoint
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (h *Handlers) SwaggerHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/yaml; charset=utf-8")
+
+	http.ServeFile(w, r, "./static/swagger.yaml")
+}
+
+func (h *Handlers) SwaggerUIHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./static/swagger.html")
 }

@@ -1,0 +1,97 @@
+openapi: 3.0.3
+info:
+  title: Dragon Weather API
+  version: 1.0.0
+  description: Go weather API using National Weather Service forecast data.
+
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: go1.24.3 v1.0.0
+
+  /weather:
+    get:
+      summary: Get weather forecast
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "32.7767"
+        - name: long
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "-96.7970"
+      responses:
+        "200":
+          description: Weather forecast returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeatherResponse"
+        "400":
+          description: Invalid or missing coordinates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid API key
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Unauthorized: Invalid or missing X-API-KEY"
+        "424":
+          description: Failed dependency from NWS API
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+
+  schemas:
+    WeatherResponse:
+      type: object
+      properties:
+        short_forecast:
+          type: string
+          example: Sunny
+        temperature:
+          type: integer
+          example: 90
+        temperature_unit:
+          type: string
+          example: F
+        characterization:
+          type: string
+          example: hot
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: invalid latitude format
