@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func NewServer(mux *http.ServeMux, serverAddr string, serverPort string) *http.Server {
+func NewServer(mux http.Handler, serverAddr string, serverPort string) *http.Server {
 
 	//Initialize the TLS configuration
 	tlsConfig := &tls.Config{

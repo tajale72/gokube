@@ -1,49 +1,192 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resident Portal</title>
-  <link rel="stylesheet" href="style.css">
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+
+ <title>Resident Portal</title>
+
+
+ <style>
+   body {
+     margin: 0;
+     font-family: Arial, sans-serif;
+     background: #f4f6f8;
+     color: #222;
+   }
+
+
+   main {
+     padding: 24px;
+   }
+
+
+   section {
+     background: white;
+     padding: 20px;
+     margin-bottom: 24px;
+     border-radius: 10px;
+     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+   }
+
+
+   .weather-card {
+     display: grid;
+     gap: 10px;
+     font-size: 18px;
+   }
+
+
+   .location-inputs {
+     display: flex;
+     gap: 12px;
+     margin-bottom: 20px;
+   }
+
+
+   input {
+     padding: 10px;
+     font-size: 16px;
+     border-radius: 6px;
+     border: 1px solid #ccc;
+     width: 200px;
+   }
+
+
+   button {
+     padding: 10px 16px;
+     border: none;
+     border-radius: 6px;
+     background: #2563eb;
+     color: white;
+     cursor: pointer;
+   }
+
+
+   button:hover {
+     background: #1d4ed8;
+   }
+ </style>
 </head>
+
+
 <body>
-  <header>
-    <h1>Welcome to Your Resident Portal</h1>
-    <nav>
-      <ul>
-        <li><a href="#">Home</a></li>
-        <li><a href="#">Maintenance Request</a></li>
-        <li><a href="#">Pay Rent</a></li>
-        <li><a href="#">Notices</a></li>
-        <li><a href="#">Profile</a></li>
-      </ul>
-    </nav>
-  </header>
 
-  <main>
-    <section class="announcements">
-      <h2>Community Announcements</h2>
-      <ul id="announcement-list">
-        <li>📢 Pool cleaning on June 5th</li>
-        <li>🚧 Elevator maintenance on June 10th</li>
-        <li>🗑️ Trash pickup delayed to Friday this week</li>
-      </ul>
-    </section>
 
-    <section class="quick-links">
-      <h2>Quick Actions</h2>
-      <div class="cards">
-        <div class="card" onclick="alert('Redirecting to maintenance request...')">🔧 Request Maintenance</div>
-        <div class="card" onclick="alert('Redirecting to rent payment...')">💳 Pay Rent</div>
-        <div class="card" onclick="alert('Redirecting to your profile...')">👤 View Profile</div>
-      </div>
-    </section>
-  </main>
+ <main>
+   <section class="weather">
+     <h2>Local Weather Forecast</h2>
 
-  <footer>
-    <p>&copy; 2025 Your Apartment Community. All rights reserved.</p>
-  </footer>
 
-  <script src="script.js"></script>
+     <div class="location-inputs">
+       <input
+         type="text"
+         id="lat"
+         placeholder="Enter Latitude"
+         value="32.7767"
+       />
+
+
+       <input
+         type="text"
+         id="long"
+         placeholder="Enter Longitude"
+         value="-96.7970"
+       />
+
+
+       <button onclick="loadWeatherForecast()">
+         Get Weather
+       </button>
+     </div>
+
+
+     <div class="weather-card">
+       <p>
+         <strong>Forecast:</strong>
+         <span id="shortForecast">--</span>
+       </p>
+
+
+       <p>
+         <strong>Temperature:</strong>
+         <span id="temperature">--</span>
+       </p>
+
+
+       <p>
+         <strong>Condition:</strong>
+         <span id="characterization">--</span>
+       </p>
+     </div>
+   </section>
+ </main>
+
+
+<script>
+ async function loadWeatherForecast() {
+   try {
+     const lat =
+       document.getElementById("lat").value;
+
+
+     const long =
+       document.getElementById("long").value;
+
+
+     const response = await fetch(
+       `/weather?lat=${lat}&long=${long}`,
+       {
+         headers: {
+           "X-API-KEY": "111"
+         }
+       }
+     );
+
+
+     if (!response.ok) {
+       throw new Error(
+         "Failed to fetch weather"
+       );
+     }
+
+
+     const data = await response.json();
+
+
+     // Updated response mapping
+     document.getElementById(
+       "shortForecast"
+     ).textContent =
+       data.short_forecast;
+
+
+     document.getElementById(
+       "temperature"
+     ).textContent =
+       `${data.temperature}°${data.temperature_unit}`;
+
+
+     document.getElementById(
+       "characterization"
+     ).textContent =
+       data.characterization;
+
+
+   } catch (error) {
+     console.error(error);
+
+
+     document.getElementById(
+       "shortForecast"
+     ).textContent =
+       "Weather unavailable";
+   }
+ }
+</script>
 </body>
 </html>
+
+
+
